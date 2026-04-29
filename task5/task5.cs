@@ -3,7 +3,7 @@ using System.Linq;
 
 class Student
 {
-    private static int _nextId = 1; //ID автоматты түрде өсу
+    private static int _nextId = 1;
 
     public int StudentId { get; private set; }
     public string Name { get; set; }
@@ -15,7 +15,6 @@ class Student
         get => _gpa;
         set
         {
-            // GPA тексеру (0.0 - 4.0)
             if (value < 0.0 || value > 4.0)
                 throw new ArgumentOutOfRangeException(nameof(GPA), "GPA must be between 0.0 and 4.0.");
             _gpa = value;
@@ -24,118 +23,72 @@ class Student
 
     public Student(string name, double gpa, string faculty)
     {
-        StudentId = _nextId++; // Автоматты түрде ID беру
-        Name = name;
-        GPA = gpa;
-        Faculty = faculty;
+        StudentId = _nextId++;
+        Name = name; GPA = gpa; Faculty = faculty;
     }
 
-    //ToString
     public override string ToString() =>
-        $"[ID: {StudentId,3}]  {Name,-20}  GPA: {GPA:F2}  Faculty: {Faculty}";
+        $"[{StudentId,3}] {Name,-20} GPA:{GPA:F2}  {Faculty}";
 }
 
 class Registry
 {
-    private const int MaxCapacity = 100;
-    private readonly Student[] _students = new Student[MaxCapacity];
+    private const int Max = 100;
+    private readonly Student[] _data = new Student[Max];
     private int _count = 0;
 
-    public bool Add(Student student)
+    public bool Add(Student s)
     {
-        if (_count >= MaxCapacity)
-        {
-            Console.WriteLine("Registry is full (100 students).");
-            return false;
-        }
-        _students[_count++] = student;
+        if (_count >= Max) { Console.WriteLine("Registry is full (100 students)."); return false; }
+        _data[_count++] = s;
         return true;
     }
 
-    public Student FindById(int id)
-    {
-        for (int i = 0; i < _count; i++)
-            if (_students[i].StudentId == id)
-                return _students[i];
-        return null;
-    }
+    public Student FindById(int id) =>
+        _data.Take(_count).FirstOrDefault(s => s.StudentId == id);
 
-    public Student[] FindByName(string name)
-    {
-        string lower = name.ToLower();
-        return _students
-               .Take(_count)
-               .Where(s => s.Name.ToLower().Contains(lower))
-               .ToArray();
-    }
+    public Student[] FindByName(string name) =>
+        _data.Take(_count)
+             .Where(s => s.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
+             .ToArray();
 
-    public Student[] GetTopStudents(int n)
-    {
-        return _students
-               .Take(_count)
-               .OrderByDescending(s => s.GPA)
-               .Take(n)
-               .ToArray();
-    }
+    public Student[] GetTopStudents(int n) =>
+        _data.Take(_count).OrderByDescending(s => s.GPA).Take(n).ToArray();
 
     public void PrintAll()
     {
-        if (_count == 0)
-        {
-            Console.WriteLine("No students in the registry.");
-            return;
-        }
-        Console.WriteLine($"\n{"ID",-6} {"Name",-20} {"GPA",-6} Faculty");
-        Console.WriteLine(new string('-', 55));
-        for (int i = 0; i < _count; i++)
-        {
-            //автоматты түрде ToString() шақырылады
-            Console.WriteLine(_students[i]);
-        }
+        if (_count == 0) { Console.WriteLine("No students in the registry."); return; }
+        for (int i = 0; i < _count; i++) Console.WriteLine(_data[i]);
     }
 }
 
 class Program
 {
-    static readonly Registry registry = new Registry();
+    static readonly Registry reg = new();
 
     static void Main()
     {
-        TryAddSilent("Aisha Bekova", 3.9, "Computer Science");
-        TryAddSilent("Daniyar Seitkali", 3.4, "Mathematics");
-        TryAddSilent("Zarina Mukhanova", 3.7, "Physics");
+        reg.Add(new("Aisha Bekova", 3.9, "Computer Science"));
+        reg.Add(new("Daniyar Seitkali", 3.4, "Mathematics"));
+        reg.Add(new("Zarina Mukhanova", 3.7, "Physics"));
 
-        bool running = true;
-        while (running)
+        while (true)
         {
             PrintMenu();
-            string choice = Console.ReadLine()?.Trim();
-            Console.WriteLine();
-
-            switch (choice)
+            switch (Console.ReadLine())
             {
                 case "1": AddStudent(); break;
                 case "2": FindById(); break;
                 case "3": FindByName(); break;
-                case "4": ShowTopStudents(); break;
-                case "5": registry.PrintAll(); break;
-                case "6":
-                    Console.WriteLine("Goodbye!");
-                    running = false;
-                    break;
-                default:
-                    Console.WriteLine("Invalid option.");
-                    break;
+                case "4": ShowTop(); break;
+                case "5": reg.PrintAll(); break;
+                case "6": return;
+                default: Console.WriteLine("Invalid option."); break;
             }
-
-            if (running)
-            {
-                Console.WriteLine("\nPress Enter to continue...");
-                Console.ReadLine();
-            }
+            Console.WriteLine("\nPress Enter to continue...");
+            Console.ReadLine();
         }
     }
-
     static void PrintMenu()
     {
         Console.Clear();
@@ -151,49 +104,38 @@ class Program
 
     static void AddStudent()
     {
-        Console.Write("Name: ");
-        string name = Console.ReadLine();
-        Console.Write("GPA: ");
-        double.TryParse(Console.ReadLine(), out double gpa);
-        Console.Write("Faculty: ");
-        string faculty = Console.ReadLine();
+        Console.Write("Name: "); string name = Console.ReadLine();
+        Console.Write("GPA: "); double.TryParse(Console.ReadLine(), out double gpa);
+        Console.Write("Faculty: "); string faculty = Console.ReadLine();
 
         try
         {
-            var student = new Student(name, gpa, faculty);
-            if (registry.Add(student))
-                // Бұл жерде де ToString() қолданылады
-                Console.WriteLine($"\nAdded: {student}");
+            var s = new Student(name, gpa, faculty);
+            if (reg.Add(s)) Console.WriteLine($"Added: {s}");
         }
         catch (Exception ex) { Console.WriteLine($"Error: {ex.Message}"); }
     }
 
     static void FindById()
     {
-        Console.Write("Enter ID: ");
+        Console.Write("ID: ");
         int.TryParse(Console.ReadLine(), out int id);
-        var s = registry.FindById(id);
-        Console.WriteLine(s != null ? $"Found: {s}" : "Not found.");
+        var s = reg.FindById(id);
+        Console.WriteLine(s != null ? $"{s}" : "Not found.");
     }
 
     static void FindByName()
     {
-        Console.Write("Enter name: ");
-        string name = Console.ReadLine();
-        var results = registry.FindByName(name);
-        foreach (var s in results) Console.WriteLine(s);
+        Console.Write("Name: ");
+        var list = reg.FindByName(Console.ReadLine());
+        if (list.Length == 0) Console.WriteLine("Not found.");
+        else foreach (var s in list) Console.WriteLine(s);
     }
 
-    static void ShowTopStudents()
+    static void ShowTop()
     {
         Console.Write("How many (N): ");
         int.TryParse(Console.ReadLine(), out int n);
-        var top = registry.GetTopStudents(n);
-        foreach (var s in top) Console.WriteLine(s);
-    }
-
-    static void TryAddSilent(string name, double gpa, string faculty)
-    {
-        try { registry.Add(new Student(name, gpa, faculty)); } catch { }
+        foreach (var s in reg.GetTopStudents(n)) Console.WriteLine(s);
     }
 }
